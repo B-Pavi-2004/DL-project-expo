@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detector</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>  
+        body {
+          font-family: 'Courier New', monospace;
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          background-color: #000;
+          color: #fff;
+        }
+        h1 {
+          color: #0ff;
+          text-align: center;
+          text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+        }
+        #input-container {
+          margin-bottom: 20px;
+        }
+        #text-input {
+          width: 100%;
+          height: 100px;
+          padding: 10px;
+          border: 2px solid #0f0;
+          border-radius: 5px;
+          font-size: 16px;
+          resize: vertical;
+          background-color: #000;
+          color: #0f0;
+          box-shadow: 0 0 10px #0f0;
+        }
+        #analyze-btn {
+          display: block;
+          width: 200px;
+          margin: 20px auto;
+          padding: 10px;
+          background-color: #000;
+          color: #f0f;
+          border: 2px solid #f0f;
+          border-radius: 5px;
+          font-size: 18px;
+          cursor: pointer;
+          transition: all 0.3s;
+          text-shadow: 0 0 5px #f0f;
+          box-shadow: 0 0 10px #f0f;
+        }
+        #analyze-btn:hover {
+          background-color: #f0f;
+          color: #000;
+          box-shadow: 0 0 20px #f0f;
+        }
+        #result {
+          background-color: rgba(255, 255, 255, 0.1);
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        #emotion {
+          font-size: 24px;
+          font-weight: bold;
+          text-align: center;
+          margin-bottom: 10px;
+          color: #ff0;
+          text-shadow: 0 0 10px #ff0;
+        }
+        #confidence {
+          text-align: center;
+          color: #0ff;
+          text-shadow: 0 0 5px #0ff;
+        }
+        .loading {
+          text-align: center;
+          font-style: italic;
+          color: #f0f;
+          text-shadow: 0 0 5px #f0f;
+        }
+        #emotion-chart {
+          width: 100%;
+          height: 200px;
+          margin-top: 20px;
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 5px;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+      </style>
+</head>
+<body>
+    <h1>Emotion Detector</h1>
+    <div id="input-container">
+        <textarea id="text-input" placeholder="Enter your text here..."></textarea>
+    </div>
+    <button id="analyze-btn" disabled>Analyze Emotion</button>
+    <div id="result">
+        <p id="emotion">Detected Emotion: </p>
+        <p id="confidence">Confidence: </p>
+        <canvas id="emotion-chart"></canvas>
+    </div>
+
+    <script>
+        let useModel;
+        let emotionChart;
+        const svmWeights = {
+    'happy': [0.8, 0.6, 0.4, -0.2, 0.7, 0.5, -0.3, 0.4, 0.6, -0.1],
+    'sad': [-0.7, -0.6, -0.8, 0.1, -0.9, -0.7, 0.2, -0.8, -0.6, 0.1],
+    'angry': [0.4, -0.7, 0.8, 0.5, -0.4, 0.6, -0.2, 0.7, -0.5, 0.3],
+    'neutral': [0.1, 0.1, -0.1, -0.1, 0.1, -0.1, 0.1, -0.1, 0.1, -0.1],
+    'excited': [0.9, 0.8, 0.6, -0.1, 0.9, 0.7, -0.2, 0.6, 0.8, -0.1],
+    'fearful': [-0.5, -0.8, -0.3, 0.6, -0.7, -0.4, 0.5, -0.6, -0.3, 0.2],
+    'bored': [-0.4, -0.3, -0.2, 0.1, -0.3, -0.4, 0.2, -0.2, -0.3, 0.1]
+};
+
+const svmBias = {
+    'happy': 0.2,
+    'sad': -0.3,
+    'angry': 0.3,
+    'neutral': 0,
+    'excited': 0.4,
+    'fearful': -0.3,
+    'bored': -0.2
+};
+
+const emotionKeywords = {
+    'happy': ['joy', 'happy', 'delighted', 'pleased', 'glad', 'content', 'appreciat', 'cheerful'],
+    'sad': ['sad', 'unhappy', 'depressed', 'gloomy', 'miserable', 'heartbroken', 'fail', 'sorrow', 'grief', 'upset'],
+    'angry': ['angry', 'furious', 'annoyed', 'irritated', 'enraged', 'mad', 'rage', 'frustrated'],
+    'neutral': ['neutral', 'indifferent', 'impartial', 'unbiased', 'objective', 'balanced'],
+    'excited': ['excited', 'thrilled', 'enthusiastic', 'eager', 'elated', 'ecstatic', 'energetic', 'pumped'],
+    'fearful': ['afraid', 'scared', 'frightened', 'terrified', 'anxious', 'worried', 'panic', 'dread'],
+    'bored': ['bored', 'dull', 'tedious', 'monotonous', 'uninterested', 'apathetic', 'listless']
+};
+
+function predictEmotion(embeddings, keywordCounts) {
+    console.log('Predicting emotion. Embeddings:', embeddings, 'Keyword counts:', keywordCounts);
+    let scores = {};
+    const totalKeywords = Object.values(keywordCounts).reduce((a, b) => a + b, 0);
+
+    for (const [emotion, weights] of Object.entries(svmWeights)) {
+        let score = svmBias[emotion];
+        for (let i = 0; i < weights.length; i++) {
+            score += weights[i] * embeddings[i];
+        }
+        if (totalKeywords > 0) {
+            score += (keywordCounts[emotion] / totalKeywords) * 0.7; // Increased keyword influence
+        }
+        scores[emotion] = Math.tanh(score);
+    }
+
+    let maxScore = -Infinity;
+    let predictedEmotion = '';
+    for (const [emotion, score] of Object.entries(scores)) {
+        if (score > maxScore) {
+            maxScore = score;
+            predictedEmotion = emotion;
+        }
+    }
+
+    console.log('Prediction result:', { emotion: predictedEmotion, confidence: maxScore, scores: scores });
+    return { emotion: predictedEmotion, confidence: maxScore, scores: scores };
+}
+
+        
+        function initializeChart() {
+            console.log('Initializing chart...');
+            const ctx = document.getElementById('emotion-chart');
+            if (!ctx) {
+                console.error('Cannot find emotion-chart element');
+                return;
+            }
+            emotionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(svmWeights),
+                    datasets: [{
+                        label: 'Emotion Scores',
+                        data: Object.keys(svmWeights).map(() => 0),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(201, 203, 207, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(201, 203, 207, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    }
+                }
+            });
+            console.log('Chart initialized');
+        }
+
+        function updateChart(scores) {
+            console.log('Updating chart with scores:', scores);
+            if (!emotionChart) {
+                console.warn('Chart not initialized. Initializing now...');
+                initializeChart();
+            }
+            emotionChart.data.datasets[0].data = Object.values(scores);
+            emotionChart.update();
+            console.log('Chart updated');
+        }
+
+        function countKeywords(text) {
+            console.log('Counting keywords for text:', text);
+            const counts = {};
+            for (const [emotion, keywords] of Object.entries(emotionKeywords)) {
+                counts[emotion] = keywords.reduce((count, keyword) => {
+                    return count + (text.toLowerCase().match(new RegExp(keyword, 'g')) || []).length;
+                }, 0);
+            }
+            console.log('Keyword counts:', counts);
+            return counts;
+        }
+
+
+        async function analyzeEmotion() {
+            console.log('analyzeEmotion function called');
+            const text = document.getElementById('text-input').value;
+            console.log('Input text:', text);
+
+            if (!text.trim()) {
+                console.warn('Empty input text');
+                alert('Please enter some text to analyze.');
+                return;
+            }
+
+            document.getElementById('emotion').textContent = 'Analyzing...';
+            document.getElementById('confidence').textContent = '';
+
+            try {
+                console.log('Checking if model is loaded...');
+                if (!useModel) {
+                    throw new Error('Universal Sentence Encoder model not loaded');
+                }
+
+                console.log('Embedding text...');
+                const embeddings = await useModel.embed(text);
+                console.log('Text embedded successfully');
+
+                const embeddingArray = await embeddings.array();
+                console.log('Embedding array created:', embeddingArray);
+
+                const keywordCounts = countKeywords(text);
+                console.log('Keyword counts:', keywordCounts);
+
+                const result = predictEmotion(embeddingArray[0].slice(0, 10), keywordCounts);
+                console.log('Emotion prediction result:', result);
+
+                document.getElementById('emotion').textContent = `Detected Emotion: ${result.emotion}`;
+                document.getElementById('confidence').textContent = `Confidence: ${(result.confidence * 100).toFixed(2)}%`;
+
+                updateChart(result.scores);
+            } catch (error) {
+                console.error('Error in analyzeEmotion:', error);
+                document.getElementById('emotion').textContent = `Error analyzing text: ${error.message}`;
+                document.getElementById('confidence').textContent = '';
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            console.log('Page loaded, initializing...');
+            try {
+                console.log('Loading Universal Sentence Encoder model...');
+                useModel = await use.load();
+                console.log('Model loaded successfully');
+                document.getElementById('analyze-btn').disabled = false;
+                initializeChart();
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                document.getElementById('emotion').textContent = `Error loading model: ${error.message}`;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            if (analyzeBtn) {
+                console.log('Adding click event listener to analyze button');
+                analyzeBtn.addEventListener('click', analyzeEmotion);
+            } else {
+                console.error('Cannot find analyze-btn element');
+            }
+        });
+
+        console.log('Script fully loaded');
+    </script>
+</body>
+</html>
