@@ -8,88 +8,104 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>  
-        body {
-          font-family: 'Courier New', monospace;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-          background-color: #000;
-          color: #fff;
+       body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000; /* Fallback color */
+            background-image: url('images\\background.jpeg'); /* Replace with your image path */
+            background-size: cover; /* Cover the entire viewport */
+            background-repeat: no-repeat; /* Prevent repeating the image */
+            background-position: center; /* Center the image */
+            color: #fff;
         }
+
         h1 {
-          color: #0ff;
-          text-align: center;
-          text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
+            color: rgb(211, 37, 104);
+            text-align: center;
+            font-size: 58px;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;
         }
+
         #input-container {
-          margin-bottom: 20px;
+            margin-bottom: 20px;
         }
+
         #text-input {
-          width: 100%;
-          height: 100px;
-          padding: 10px;
-          border: 2px solid #0f0;
-          border-radius: 5px;
-          font-size: 16px;
-          resize: vertical;
-          background-color: #000;
-          color: #0f0;
-          box-shadow: 0 0 10px #0f0;
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+            background-color: #000;
+            color: #0f0;
+            box-shadow: 0 0 10px #0f0;
         }
+
         #analyze-btn {
-          display: block;
-          width: 200px;
-          margin: 20px auto;
-          padding: 10px;
-          background-color: #000;
-          color: #f0f;
-          border: 2px solid #f0f;
-          border-radius: 5px;
-          font-size: 18px;
-          cursor: pointer;
-          transition: all 0.3s;
-          text-shadow: 0 0 5px #f0f;
-          box-shadow: 0 0 10px #f0f;
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #000;
+            color: #f0f;
+            border: 2px solid #f0f;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px #f0f;
+            box-shadow: 0 0 10px #f0f;
         }
+
         #analyze-btn:hover {
-          background-color: #f0f;
-          color: #000;
-          box-shadow: 0 0 20px #f0f;
+            background-color: #f0f;
+            color: #000;
+            box-shadow: 0 0 20px #f0f;
         }
+
         #result {
-          background-color: rgba(255, 255, 255, 0.1);
-          padding: 20px;
-          border-radius: 5px;
-          box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
         }
+
         #emotion {
-          font-size: 24px;
-          font-weight: bold;
-          text-align: center;
-          margin-bottom: 10px;
-          color: #ff0;
-          text-shadow: 0 0 10px #ff0;
+            font-size: 50px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            color: #000; /* Black for emotion label */
+            text-shadow: 0 0 10px #ff0;
         }
+
         #confidence {
-          text-align: center;
-          color: #0ff;
-          text-shadow: 0 0 5px #0ff;
+            text-align: center;
+            color: #14cda2; /* Black for numbers */
+            font-size: 45px;
+            text-shadow: 0 0 5px rgb(4, 40, 40);
         }
+
         .loading {
-          text-align: center;
-          font-style: italic;
-          color: #f0f;
-          text-shadow: 0 0 5px #f0f;
+            text-align: center;
+            font-style: italic;
+            color: #f0f;
+            text-shadow: 0 0 5px rgb(227, 154, 76);
         }
+
         #emotion-chart {
-          width: 100%;
-          height: 200px;
-          margin-top: 20px;
-          background-color: rgba(255, 255, 255, 0.1);
-          border-radius: 5px;
-          box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
-      </style>
+    </style>
 </head>
 <body>
     <h1>Emotion Detector</h1>
@@ -166,53 +182,61 @@ function predictEmotion(embeddings, keywordCounts) {
 }
 
         
-        function initializeChart() {
-            console.log('Initializing chart...');
-            const ctx = document.getElementById('emotion-chart');
-            if (!ctx) {
-                console.error('Cannot find emotion-chart element');
-                return;
-            }
-            emotionChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(svmWeights),
-                    datasets: [{
-                        label: 'Emotion Scores',
-                        data: Object.keys(svmWeights).map(() => 0),
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.7)',
-                            'rgba(54, 162, 235, 0.7)',
-                            'rgba(255, 206, 86, 0.7)',
-                            'rgba(75, 192, 192, 0.7)',
-                            'rgba(153, 102, 255, 0.7)',
-                            'rgba(255, 159, 64, 0.7)',
-                            'rgba(201, 203, 207, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)',
-                            'rgba(201, 203, 207, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 1
-                        }
+function initializeChart() {
+    console.log('Initializing chart...');
+    const ctx = document.getElementById('emotion-chart');
+    if (!ctx) {
+        console.error('Cannot find emotion-chart element');
+        return;
+    }
+    emotionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(svmWeights),
+            datasets: [{
+                label: 'Emotion Scores',
+                data: Object.keys(svmWeights).map(() => 0),
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'black'  // Set the color of the x-axis labels to black
                     }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'black'  // Set the color of the y-axis labels to black
+                    },
+                    max: 1
                 }
-            });
-            console.log('Chart initialized');
+            }
         }
+    });
+    console.log('Chart initialized');
+}
+
 
         function updateChart(scores) {
             console.log('Updating chart with scores:', scores);
@@ -300,14 +324,11 @@ function predictEmotion(embeddings, keywordCounts) {
             console.log('DOM fully loaded');
             const analyzeBtn = document.getElementById('analyze-btn');
             if (analyzeBtn) {
-                console.log('Adding click event listener to analyze button');
                 analyzeBtn.addEventListener('click', analyzeEmotion);
             } else {
-                console.error('Cannot find analyze-btn element');
+                console.error('Cannot find analyze button');
             }
         });
-
-        console.log('Script fully loaded');
     </script>
 </body>
 </html>
